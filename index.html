@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>美東車行綜合管理系統 (更表 + 告示 + 按金表)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; padding: 10px; font-weight: bold; color: #000; background-color: #f4f4f4; margin: 0; }
+        
+        /* 頂部頁籤 (Tabs) */
+        .tab-menu { max-width: 900px; margin: 10px auto; display: flex; gap: 10px; }
+        .tab-btn { flex: 1; padding: 15px; font-size: 18px; font-weight: 900; background: #e0e0e0; color: #333; border: 2px solid #ccc; border-radius: 8px 8px 0 0; cursor: pointer; text-align: center; }
+        .tab-btn.active { background: #007bff; color: white; border-color: #007bff; }
+
+        .tab-content { display: none; background: #fff; padding: 15px; border-radius: 0 0 8px 8px; max-width: 900px; margin: 0 auto 20px auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .tab-content.active { display: block; }
+
+        /* 輸入樣式 */
+        .input-group { display: inline-block; margin-right: 15px; margin-bottom: 12px; vertical-align: top; }
+        .input-group label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 15px; }
+        select, input, textarea { padding: 10px; font-size: 16px; font-weight: bold; border: 2px solid #bbb; border-radius: 6px; width: 100%; min-width: 140px; background-color: #fff; font-family: inherit; }
+        textarea { height: 160px; resize: vertical; }
+        .inline-inputs .input-group { width: 48%; display: inline-block; margin-right: 2%; }
+        .inline-inputs-3 .input-group { width: 31%; display: inline-block; margin-right: 1.5%; }
+        .wide-input { width: 100% !important; }
+
+        /* 按鈕樣式 */
+        .button-group { margin-top: 10px; }
+        button.action-btn { padding: 12px 20px; font-size: 16px; font-weight: bold; color: white; border: none; cursor: pointer; border-radius: 5px; margin-right: 10px; margin-bottom: 10px; }
+        .btn-blue { background: #007bff; }
+        .btn-green { background: #28a745; }
+
+        /* ================= 列印樣式：更表 ================= */
+        .print-schedule { width: 100%; display: flex; flex-direction: column; height: 92vh; background: #fff; }
+        .header-title { font-size: 32px; font-weight: 900; margin-bottom: 12px; text-align: left; padding-left: 5px; }
+        table { width: 100%; border-collapse: collapse; text-align: center; font-weight: bold; table-layout: fixed; flex: 1; height: 100%; }
+        th, td { border: 2px solid #000; font-size: 16px; font-weight: 900; }
+        th { background-color: #e9e9e9; padding: 6px 2px; font-size: 17px; }
+        .holiday { color: #d9534f; background-color: #fff5f5; }
+
+        /* ================= 列印樣式：告示 ================= */
+        .notice-paper { background: #fff; width: 100%; min-height: 80vh; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #ddd; }
+        .notice-header { text-align: center; border-bottom: 4px double #000; padding-bottom: 15px; margin-bottom: 30px; }
+        .notice-header h1 { font-size: 36px; margin: 0; }
+        .notice-body { font-size: 24px; line-height: 1.8; white-space: pre-wrap; font-weight: bold; flex: 1; }
+        .notice-footer { text-align: right; margin-top: 40px; font-size: 22px; font-weight: bold; border-top: 2px solid #000; padding-top: 20px; }
+
+        /* ================= 列印樣式：按金表 (適應 30 行) ================= */
+        .deposit-paper { background: #fff; width: 100%; height: 95vh; padding: 0; display: flex; flex-direction: column; }
+        .deposit-header { border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 4px; }
+        .deposit-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 15px; margin-top: 4px; background: #f9f9f9; padding: 6px; border: 1px solid #000; }
+        .rules-box { font-size: 12px; margin-top: 4px; color: #333; font-weight: normal; }
+
+        .deposit-table { width: 100%; border-collapse: collapse; height: 100%; }
+        .deposit-table th { padding: 4px 2px; font-size: 14px; background-color: #eee; }
+        .deposit-table td { padding: 2px 2px; font-size: 13px; }
+
+        /* 全局 A4 列印控制 */
+        @page { size: A4 portrait; margin: 8mm 8mm 8mm 8mm; }
+        @media print {
+            body { background-color: #fff; padding: 0; margin: 0; }
+            .tab-menu, .no-print { display: none !important; }
+            
+            .tab-content { display: none !important; padding: 0; margin: 0; box-shadow: none; max-width: 100%; }
+            .tab-content.active { display: block !important; }
+
+            .print-schedule { height: 96%; position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+            .notice-paper { border: none; height: 96%; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 10mm; }
+            .deposit-paper { height: 98%; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 0; }
+            .holiday { color: #000; background-color: #fff; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 司機自動建議名單數據 -->
+    <datalist id="driverList">
+        <option value="阮翰忠"><option value="陣偉忠"><option value="陳楚強"><option value="梁耀昌">
+        <option value="鄭禮和"><option value="陳穎文"><option value="李玉枝"><option value="甄從新">
+        <option value="余偉雄"><option value="梁錦慶"><option value="李衍成"><option value="吳偉納">
+        <option value="邱理想"><option value="袁幼華"><option value="李興"><option value="鄭志文"><option value="譚國燊">
+    </datalist>
+
+    <!-- 車牌自動建議名單數據 -->
+    <datalist id="carList">
+        <option value="ZD 1057"><option value="SZ 278"><option value="YW 3901"><option value="RN 3916">
+        <option value="UG 438"><option value="YV 5943"><option value="WP 6147"><option value="SX 6881">
+        <option value="YV 7859"><option value="VM 2811"><option value="YX 4800">
+    </datalist>
+
+    <!-- 頂部切換頁籤 -->
+    <div class="tab-menu no-print">
+        <div class="tab-btn active" onclick="switchTab('scheduleTab', this)">🚕 的士更表生成器</div>
+        <div class="tab-btn" onclick="switchTab('noticeTab', this)">📢 告示範本列印</div>
+        <div class="tab-btn" onclick="switchTab('depositTab', this)">💰 司機按金紀錄表</div>
+    </div>
+
+    <!-- ================= 頁籤 1：車輛更表 ================= -->
+    <div id="scheduleTab" class="tab-content active">
+        <div class="no-print">
+            <h3 style="margin-top:0; color:#333;">🚕 車表資料輸入</h3>
+            <div class="input-group" style="width: 100%;">
+                <label>的士款式：</label>
+                <select id="taxiType" onchange="updateDefaultPrices()">
+                    <option value="小露寶">小露寶 (混能的士)</option>
+                    <option value="舊四">舊四 (金豐的士)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>車牌：</label>
+                <input type="text" id="carNo" list="carList" value="ZD 1057">
+            </div>
+            <div class="inline-inputs">
+                <div class="input-group"><label>年份：</label><input type="number" id="year" value="2026"></div>
+                <div class="input-group"><label>月份：</label><input type="number" id="month" value="8" min="1" max="12"></div>
+            </div>
+            <div class="inline-inputs">
+                <div class="input-group"><label>早更司機姓名：</label><input type="text" id="dayDriver" list="driverList" value=""></div>
+                <div class="input-group"><label>夜更司機姓名：</label><input type="text" id="nightDriver" list="driverList" value=""></div>
+            </div>
+            <div class="input-group wide-input"><label>早更放假/留空日期 (例如: 5, 12)：</label><input type="text" id="dayOffDays" value=""></div>
+            <div class="input-group wide-input"><label>夜更放假/留空日期 (例如: 6, 13)：</label><input type="text" id="nightOffDays" value=""></div>
+            <div class="inline-inputs">
+                <div class="input-group"><label>早更租金：</label><input type="number" id="dayPrice" value="560"></div>
+                <div class="input-group"><label>夜更租金：</label><input type="number" id="nightPrice" value="510"></div>
+            </div>
+            <div class="input-group" style="width: 100%;"><label>紅日 / 星期日減收金額 ($)：</label><input type="number" id="discountPrice" value="50"></div>
+            <div class="button-group">
+                <button class="action-btn btn-blue" onclick="generateTable()">生成簽收表</button>
+                <button class="action-btn btn-green" onclick="window.print()">列印 / 儲存 PDF</button>
+            </div>
+            <hr style="margin: 20px 0;">
+        </div>
+        <div class="print-schedule" id="printArea"></div>
+    </div>
+
+    <!-- ================= 頁籤 2：告示範本 ================= -->
+    <div id="noticeTab" class="tab-content">
+        <div class="no-print">
+            <h3 style="margin-top:0; color:#333;">📢 車行告示資料設定</h3>
+            <div class="input-group wide-input">
+                <label>選擇告示範本：</label>
+                <select id="templateSelect" onchange="loadTemplate()">
+                    <option value="rent">1. 車租調整通知 (加車租)</option>
+                    <option value="weather">2. 惡劣天氣 / 颱風小心駕駛提醒</option>
+                    <option value="custom">3. 自訂空白範本</option>
+                </select>
+            </div>
+            <div class="input-group wide-input"><label>告示大標題：</label><input type="text" id="inputTitle" oninput="updateNotice()"></div>
+            <div class="input-group wide-input"><label>告示內容：</label><textarea id="inputContent" oninput="updateNotice()"></textarea></div>
+            <div class="inline-inputs">
+                <div class="input-group"><label>車行名稱 (落款)：</label><input type="text" id="inputCompany" value="美東車行 啟" oninput="updateNotice()"></div>
+                <div class="input-group"><label>發出日期：</label><input type="text" id="inputDate" oninput="updateNotice()"></div>
+            </div>
+            <div class="button-group">
+                <button class="action-btn btn-green" onclick="window.print()">🖨️ 即時列印告示 / 儲存 PDF</button>
+            </div>
+            <hr style="margin: 20px 0;">
+        </div>
+
+        <div class="notice-paper">
+            <div>
+                <div class="notice-header">
+                    <h1 id="displayTitle">車租調整通知</h1>
+                    <div style="font-size:20px; margin-top:10px;">【 全體司機兄弟注意 】</div>
+                </div>
+                <div class="notice-body" id="displayContent"></div>
+            </div>
+            <div class="notice-footer">
+                <div id="displayCompany">美東車行 啟</div>
+                <div id="displayDate" style="margin-top: 8px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 頁籤 3：司機按金表 ================= -->
+    <div id="depositTab" class="tab-content">
+        <div class="no-print">
+            <h3 style="margin-top:0; color:#333;">💰 司機按金遞繳紀錄設定</h3>
+            
+            <div class="inline-inputs">
+                <div class="input-group"><label>起始期數 (例: 1, 31, 61)：</label><input type="number" id="depStartRange" value="1" min="1" oninput="generateDepositTable()"></div>
+                <div class="input-group"><label>結束期數 (例: 30, 60, 90)：</label><input type="number" id="depEndRange" value="30" min="1" oninput="generateDepositTable()"></div>
+            </div>
+
+            <div class="input-group wide-input" style="margin-bottom: 5px;">
+                <label style="cursor: pointer;">
+                    <input type="checkbox" id="depIncludeInitial" checked style="width: auto; min-width: auto; vertical-align: middle;" onchange="generateDepositTable()">
+                    在表格頂部顯示「首期按金」項目 (通常適用於第 1 期)
+                </label>
+            </div>
+
+            <div class="input-group wide-input">
+                <label>司機姓名：</label>
+                <input type="text" id="depDriverName" list="driverList" placeholder="輸入或選擇司機" oninput="generateDepositTable()">
+            </div>
+            <div class="inline-inputs-3">
+                <div class="input-group"><label>首次首期按金 ($)：</label><input type="number" id="depInitial" value="2000" oninput="generateDepositTable()"></div>
+                <div class="input-group"><label>每次租車供款 ($)：</label><input type="number" id="depDaily" value="100" oninput="generateDepositTable()"></div>
+                <div class="input-group"><label>按金封頂金額 ($)：</label><input type="number" id="depMax" value="20000" oninput="generateDepositTable()"></div>
+            </div>
+            <div class="button-group">
+                <button class="action-btn btn-blue" onclick="generateDepositTable()">更新按金表</button>
+                <button class="action-btn btn-green" onclick="window.print()">🖨️ 列印按金表 / 儲存 PDF</button>
+            </div>
+            <hr style="margin: 20px 0;">
+        </div>
+
+        <!-- 按金表 A4 列印預覽區 -->
+        <div class="deposit-paper" id="depositPrintArea"></div>
+    </div>
+
+    <script>
+        // 頁籤切換
+        function switchTab(tabId, btnElement) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        // ================= 更表邏輯 =================
+        function updateDefaultPrices() {
+            const taxiType = document.getElementById('taxiType').value;
+            if (taxiType === '小露寶') {
+                document.getElementById('dayPrice').value = 560;
+                document.getElementById('nightPrice').value = 510;
+            } else if (taxiType === '舊四') {
+                document.getElementById('dayPrice').value = 430;  
+                document.getElementById('nightPrice').value = 380; 
+            }
+            generateTable(); 
+        }
+
+        function isHKPublicHoliday(year, month, day) {
+            const dateStr = year + "-" + month + "-" + day;
+            if (month === 1 && day === 1) return true; 
+            if (month === 5 && day === 1) return true; 
+            if (month === 7 && day === 1) return true; 
+            if (month === 10 && day === 1) return true; 
+            if (month === 12 && (day === 25 || day === 26)) return true; 
+            const dynamicHolidays = {
+                2026: ["2026-2-17", "2026-2-18", "2026-2-19", "2026-4-3", "2026-4-4", "2026-4-6", "2026-4-7", "2026-5-2", "2026-5-25", "2026-6-19", "2026-9-26", "2026-10-19", "2026-12-28"],
+                2027: ["2027-2-6", "2027-2-8", "2027-2-9", "2027-3-26", "2027-3-27", "2027-3-29", "2027-4-5", "2027-5-13", "2027-6-9", "2027-9-16", "2027-10-8", "2027-12-27"]
+            };
+            return dynamicHolidays[year] && dynamicHolidays[year].includes(dateStr);
+        }
+
+        function parseOffDays(inputStr) {
+            if (!inputStr) return [];
+            return inputStr.split(',').map(day => parseInt(day.trim())).filter(day => !isNaN(day));
+        }
+
+        function generateTable() {
+            const carNo = document.getElementById('carNo').value;
+            const year = parseInt(document.getElementById('year').value);
+            const month = parseInt(document.getElementById('month').value);
+            const baseDayPrice = parseInt(document.getElementById('dayPrice').value) || 0;
+            const baseNightPrice = parseInt(document.getElementById('nightPrice').value) || 0;
+            const discount = parseInt(document.getElementById('discountPrice').value) || 0;
+            const dayDriver = document.getElementById('dayDriver').value;
+            const nightDriver = document.getElementById('nightDriver').value;
+            const dayOffList = parseOffDays(document.getElementById('dayOffDays').value);
+            const nightOffList = parseOffDays(document.getElementById('nightOffDays').value);
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            let html = `<div class="header-title">車牌：${carNo}</div>
+            <table><thead><tr>
+                <th style="width: 22%;">日期</th><th style="width: 10%;">星期</th>
+                <th style="width: 14%;">早更</th><th style="width: 11%;">金額</th><th style="width: 16%;">簽署</th>
+                <th style="width: 14%;">夜更</th><th style="width: 11%;">金額</th><th style="width: 16%;">簽署</th>
+            </tr></thead><tbody>`;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                let dateStr = `${d < 10 ? '0' + d : d}/${month < 10 ? '0' + month : month}/${year}`;
+                const dateObj = new Date(year, month - 1, d);
+                let dayIdx = dateObj.getDay();
+                let isRedDay = (dayIdx === 0) || isHKPublicHoliday(year, month, d);
+                let currentDayPrice = isRedDay ? (baseDayPrice - discount) : baseDayPrice;
+                let currentNightPrice = isRedDay ? (baseNightPrice - discount) : baseNightPrice;
+                let rowClass = isRedDay ? 'class="holiday"' : '';
+                
+                let finalDayDriver = (dayOffList.includes(d) || dayDriver === "") ? '&nbsp;' : dayDriver;
+                let finalNightDriver = (nightOffList.includes(d) || nightDriver === "") ? '&nbsp;' : nightDriver;
+
+                html += `<tr ${rowClass}>
+                    <td>${dateStr}</td><td>${weekdays[dayIdx]}</td>
+                    <td>${finalDayDriver}</td><td>${currentDayPrice}</td><td>&nbsp;</td>
+                    <td>${finalNightDriver}</td><td>${currentNightPrice}</td><td>&nbsp;</td>
+                </tr>`;
+            }
+            html += `</tbody></table>`;
+            document.getElementById('printArea').innerHTML = html;
+        }
+
+        // ================= 告示邏輯 =================
+        const templates = {
+            rent: { title: "車租調整通知", content: "各位司機兄弟：\n\n因應營運成本上漲，本車行決定將於以下日期調整車租：\n\n生效日期：2026年  月  日\n調整金額：每日加收 $____\n\n如有疑問，請聯絡車行。祝各位行車安全！" },
+            weather: { title: "惡劣天氣小心駕駛告示", content: "各位司機兄弟：\n\n現時天氣惡劣（颱風/暴雨），開車請特別注意：\n\n1. 保持安全車距，切勿跟車太貼。\n2. 積水路段請減速，切勿強行衝過。\n3. 以人身安全為首要考慮。\n\n平安歸家！" },
+            custom: { title: "重要通知", content: "各位司機兄弟：\n\n請在此輸入通知內容...\n\n多謝合作！" }
+        };
+
+        function loadTemplate() {
+            const key = document.getElementById('templateSelect').value;
+            document.getElementById('inputTitle').value = templates[key].title;
+            document.getElementById('inputContent').value = templates[key].content;
+            updateNotice();
+        }
+
+        function updateNotice() {
+            document.getElementById('displayTitle').innerText = document.getElementById('inputTitle').value;
+            document.getElementById('displayContent').innerText = document.getElementById('inputContent').value;
+            document.getElementById('displayCompany').innerText = document.getElementById('inputCompany').value;
+            document.getElementById('displayDate').innerText = document.getElementById('inputDate').value;
+        }
+
+        // ================= 按金表邏輯 =================
+        function generateDepositTable() {
+            const startRange = parseInt(document.getElementById('depStartRange').value) || 1;
+            const endRange = parseInt(document.getElementById('depEndRange').value) || 30;
+            const includeInitial = document.getElementById('depIncludeInitial').checked;
+
+            const driverName = document.getElementById('depDriverName').value || "___________";
+            const initial = document.getElementById('depInitial').value || 2000;
+            const daily = document.getElementById('depDaily').value || 100;
+            const max = document.getElementById('depMax').value || 20000;
+
+            let pageSubTitle = (startRange === 1) ? "" : ` (第 ${startRange} 至 ${endRange} 期)`;
+
+            let html = `
+            <div class="deposit-header">
+                <h1 style="margin:0; text-align:center; font-size:24px;">美東車行 - 司機按金遞繳紀錄表${pageSubTitle}</h1>
+                <div class="deposit-info-grid">
+                    <div><b>司機姓名：</b>${driverName}</div>
+                    <div><b>按金總上限 (封頂)：</b>$${max}</div>
+                </div>
+                <div class="rules-box">
+                    * <b>按金規矩：</b>入職開車首期按金最少為 $${initial}；其後每次/每日租車隨車租遞繳供款 $${daily}，直至按金總額達到上限 $${max} 為止。
+                </div>
+            </div>
+
+            <table class="deposit-table" style="margin-top: 4px;">
+                <thead>
+                    <tr>
+                        <th style="width: 14%;">期數 / 項目</th>
+                        <th style="width: 24%;">交按金日期</th>
+                        <th style="width: 20%;">本次供款金額 ($)</th>
+                        <th style="width: 22%;">累積按金總額 ($)</th>
+                        <th style="width: 20%;">司機/經手人簽署</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            // 如果有勾選顯示首期按金
+            if (includeInitial) {
+                html += `<tr>
+                    <td><b>首期按金</b></td>
+                    <td>&nbsp;</td>
+                    <td>$${initial}</td>
+                    <td>$${initial}</td>
+                    <td>&nbsp;</td>
+                </tr>`;
+            }
+
+            // 根據設定的起始與結束期數動態生成
+            for (let i = startRange; i <= endRange; i++) {
+                html += `<tr>
+                    <td><b>第 ${i} 期</b></td>
+                    <td>&nbsp;</td>
+                    <td>+$${daily}</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                </tr>`;
+            }
+
+            html += `</tbody></table>`;
+            document.getElementById('depositPrintArea').innerHTML = html;
+        }
+
+        window.onload = function() {
+            generateTable();
+            const today = new Date();
+            document.getElementById('inputDate').value = `${today.getFullYear()} 年 ${today.getMonth() + 1} 月 ${today.getDate()} 日`;
+            loadTemplate();
+            generateDepositTable();
+        };
+    </script>
+</body>
+</html>
