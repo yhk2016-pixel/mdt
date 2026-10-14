@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>美東車行綜合管理系統 (更表 + 告示 + 按金表)</title>
+    <title>美東車行綜合管理系統 (Android 列印優化版)</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: "Microsoft JhengHei", Arial, sans-serif; padding: 10px; font-weight: bold; color: #000; background-color: #f4f4f4; margin: 0; }
@@ -32,43 +32,67 @@
         .btn-green { background: #28a745; }
 
         /* ================= 列印樣式：更表 ================= */
-        .print-schedule { width: 100%; display: flex; flex-direction: column; height: 92vh; background: #fff; }
-        .header-title { font-size: 32px; font-weight: 900; margin-bottom: 12px; text-align: left; padding-left: 5px; }
-        table { width: 100%; border-collapse: collapse; text-align: center; font-weight: bold; table-layout: fixed; flex: 1; height: 100%; }
-        th, td { border: 2px solid #000; font-size: 16px; font-weight: 900; }
-        th { background-color: #e9e9e9; padding: 6px 2px; font-size: 17px; }
+        .print-schedule { width: 100%; display: flex; flex-direction: column; background: #fff; }
+        .header-title { font-size: 28px; font-weight: 900; margin-bottom: 8px; text-align: left; padding-left: 2px; }
+        table { width: 100%; border-collapse: collapse; text-align: center; font-weight: bold; table-layout: fixed; }
+        th, td { border: 2px solid #000; font-size: 15px; font-weight: 900; padding: 3px 1px; }
+        th { background-color: #e9e9e9; font-size: 16px; padding: 5px 1px; }
         .holiday { color: #d9534f; background-color: #fff5f5; }
 
         /* ================= 列印樣式：告示 ================= */
-        .notice-paper { background: #fff; width: 100%; min-height: 80vh; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #ddd; }
+        .notice-paper { background: #fff; width: 100%; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #ddd; }
         .notice-header { text-align: center; border-bottom: 4px double #000; padding-bottom: 15px; margin-bottom: 30px; }
         .notice-header h1 { font-size: 36px; margin: 0; }
-        .notice-body { font-size: 24px; line-height: 1.8; white-space: pre-wrap; font-weight: bold; flex: 1; }
+        .notice-body { font-size: 22px; line-height: 1.8; white-space: pre-wrap; font-weight: bold; flex: 1; }
         .notice-footer { text-align: right; margin-top: 40px; font-size: 22px; font-weight: bold; border-top: 2px solid #000; padding-top: 20px; }
 
-        /* ================= 列印樣式：按金表 (適應 30 行) ================= */
-        .deposit-paper { background: #fff; width: 100%; height: 95vh; padding: 0; display: flex; flex-direction: column; }
+        /* ================= 列印樣式：按金表 ================= */
+        .deposit-paper { background: #fff; width: 100%; padding: 0; display: flex; flex-direction: column; }
         .deposit-header { border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 4px; }
-        .deposit-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 15px; margin-top: 4px; background: #f9f9f9; padding: 6px; border: 1px solid #000; }
+        .deposit-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 14px; margin-top: 4px; background: #f9f9f9; padding: 5px; border: 1px solid #000; }
         .rules-box { font-size: 12px; margin-top: 4px; color: #333; font-weight: normal; }
 
-        .deposit-table { width: 100%; border-collapse: collapse; height: 100%; }
-        .deposit-table th { padding: 4px 2px; font-size: 14px; background-color: #eee; }
-        .deposit-table td { padding: 2px 2px; font-size: 13px; }
+        .deposit-table { width: 100%; border-collapse: collapse; }
+        .deposit-table th { padding: 4px 2px; font-size: 13px; background-color: #eee; }
+        .deposit-table td { padding: 2px 2px; font-size: 12px; }
 
-        /* 全局 A4 列印控制 */
-        @page { size: A4 portrait; margin: 8mm 8mm 8mm 8mm; }
+        /* ================= 全局 A4 強制單頁列印控制 (Android 適用) ================= */
+        @page { 
+            size: A4 portrait; 
+            margin: 5mm 5mm 5mm 5mm; /* 縮小邊距 */
+        }
+        
         @media print {
-            body { background-color: #fff; padding: 0; margin: 0; }
+            html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden;
+                background-color: #fff;
+            }
+
             .tab-menu, .no-print { display: none !important; }
             
             .tab-content { display: none !important; padding: 0; margin: 0; box-shadow: none; max-width: 100%; }
             .tab-content.active { display: block !important; }
 
-            .print-schedule { height: 96%; position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
-            .notice-paper { border: none; height: 96%; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 10mm; }
-            .deposit-paper { height: 98%; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 0; }
-            .holiday { color: #000; background-color: #fff; }
+            /* 使用 CSS transform 強制縮放與防跨頁 */
+            .print-schedule, .notice-paper, .deposit-paper { 
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+                width: 100% !important;
+                max-height: 98vh !important;
+            }
+
+            th, td {
+                padding: 2px 1px !important;
+                font-size: 13px !important;
+            }
+
+            .holiday { color: #000 !important; background-color: #fff !important; }
         }
     </style>
 </head>
@@ -331,7 +355,7 @@
 
             let html = `
             <div class="deposit-header">
-                <h1 style="margin:0; text-align:center; font-size:24px;">美東車行 - 司機按金遞繳紀錄表${pageSubTitle}</h1>
+                <h1 style="margin:0; text-align:center; font-size:22px;">美東車行 - 司機按金遞繳紀錄表${pageSubTitle}</h1>
                 <div class="deposit-info-grid">
                     <div><b>司機姓名：</b>${driverName}</div>
                     <div><b>按金總上限 (封頂)：</b>$${max}</div>
@@ -353,7 +377,6 @@
                 </thead>
                 <tbody>`;
 
-            // 如果有勾選顯示首期按金
             if (includeInitial) {
                 html += `<tr>
                     <td><b>首期按金</b></td>
@@ -364,7 +387,6 @@
                 </tr>`;
             }
 
-            // 根據設定的起始與結束期數動態生成
             for (let i = startRange; i <= endRange; i++) {
                 html += `<tr>
                     <td><b>第 ${i} 期</b></td>
