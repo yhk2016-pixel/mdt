@@ -31,44 +31,42 @@
         .btn-blue { background: #007bff; }
         .btn-green { background: #28a745; }
 
-        /* ================= 列印樣式：更表 ================= */
-        .print-schedule { width: 100%; display: flex; flex-direction: column; background: #fff; }
-        .header-title { font-size: 28px; font-weight: 900; margin-bottom: 8px; text-align: left; padding-left: 2px; }
+        /* ================= 顯示與列印樣式：更表 ================= */
+        .print-schedule { width: 100%; background: #fff; }
+        .header-title { font-size: 26px; font-weight: 900; margin-bottom: 6px; text-align: left; padding-left: 2px; }
         table { width: 100%; border-collapse: collapse; text-align: center; font-weight: bold; table-layout: fixed; }
-        th, td { border: 2px solid #000; font-size: 15px; font-weight: 900; padding: 3px 1px; }
-        th { background-color: #e9e9e9; font-size: 16px; padding: 5px 1px; }
+        th, td { border: 2px solid #000; font-size: 14px; font-weight: 900; padding: 2px 1px; }
+        th { background-color: #e9e9e9; font-size: 15px; padding: 4px 1px; }
         .holiday { color: #d9534f; background-color: #fff5f5; }
 
-        /* ================= 列印樣式：告示 ================= */
+        /* ================= 顯示與列印樣式：告示 ================= */
         .notice-paper { background: #fff; width: 100%; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #ddd; }
         .notice-header { text-align: center; border-bottom: 4px double #000; padding-bottom: 15px; margin-bottom: 30px; }
         .notice-header h1 { font-size: 36px; margin: 0; }
         .notice-body { font-size: 22px; line-height: 1.8; white-space: pre-wrap; font-weight: bold; flex: 1; }
         .notice-footer { text-align: right; margin-top: 40px; font-size: 22px; font-weight: bold; border-top: 2px solid #000; padding-top: 20px; }
 
-        /* ================= 列印樣式：按金表 ================= */
+        /* ================= 顯示與列印樣式：按金表 ================= */
         .deposit-paper { background: #fff; width: 100%; padding: 0; display: flex; flex-direction: column; }
         .deposit-header { border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 4px; }
         .deposit-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 14px; margin-top: 4px; background: #f9f9f9; padding: 5px; border: 1px solid #000; }
         .rules-box { font-size: 12px; margin-top: 4px; color: #333; font-weight: normal; }
 
         .deposit-table { width: 100%; border-collapse: collapse; }
-        .deposit-table th { padding: 4px 2px; font-size: 13px; background-color: #eee; }
-        .deposit-table td { padding: 2px 2px; font-size: 12px; }
+        .deposit-table th { padding: 3px 2px; font-size: 13px; background-color: #eee; }
+        .deposit-table td { padding: 1.5px 2px; font-size: 12px; }
 
-        /* ================= 全局 A4 強制單頁列印控制 (Android 適用) ================= */
+        /* ================= 全局 A4 列印縮放修正 (Android 專用) ================= */
         @page { 
             size: A4 portrait; 
-            margin: 5mm 5mm 5mm 5mm; /* 縮小邊距 */
+            margin: 6mm 6mm 6mm 6mm; 
         }
         
         @media print {
             html, body {
                 width: 100%;
-                height: 100%;
                 margin: 0 !important;
                 padding: 0 !important;
-                overflow: hidden;
                 background-color: #fff;
             }
 
@@ -77,18 +75,30 @@
             .tab-content { display: none !important; padding: 0; margin: 0; box-shadow: none; max-width: 100%; }
             .tab-content.active { display: block !important; }
 
-            /* 使用 CSS transform 強制縮放與防跨頁 */
-            .print-schedule, .notice-paper, .deposit-paper { 
+            /* 採用 zoom 全局縮放，確保 31 日全部擠入單頁 A4 */
+            .print-schedule { 
+                zoom: 0.82;
+                width: 100% !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
-                page-break-after: avoid !important;
-                break-after: avoid !important;
+            }
+
+            .deposit-paper {
+                zoom: 0.82;
                 width: 100% !important;
-                max-height: 98vh !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            .notice-paper {
+                zoom: 0.90;
+                width: 100% !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
 
             th, td {
-                padding: 2px 1px !important;
+                padding: 1.5px 1px !important;
                 font-size: 13px !important;
             }
 
@@ -137,7 +147,7 @@
             </div>
             <div class="inline-inputs">
                 <div class="input-group"><label>年份：</label><input type="number" id="year" value="2026"></div>
-                <div class="input-group"><label>月份：</label><input type="number" id="month" value="8" min="1" max="12"></div>
+                <div class="input-group"><label>月份：</label><input type="number" id="month" value="11" min="1" max="12"></div>
             </div>
             <div class="inline-inputs">
                 <div class="input-group"><label>早更司機姓名：</label><input type="text" id="dayDriver" list="driverList" value=""></div>
